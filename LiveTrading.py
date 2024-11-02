@@ -24,7 +24,7 @@ if __name__ == '__main__':
     if os.name == 'nt':
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     pp = PrettyPrinter()  ##for printing json text cleanly (inspect binance API call returns)
-    Bots: [BotClass.Bot] = []
+    Bots: [BotClass.Bot] = [] # type: ignore
     signal_queue = None
     print_trades_q = None
     if use_multiprocessing_for_trade_execution:

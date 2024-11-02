@@ -6,8 +6,6 @@ import TradingStrats as TS
 from Logger import *
 from LiveTradingConfig import custom_tp_sl_functions, make_decision_options, wait_for_candle_close
 
-
-
 class Bot:
     def __init__(self, symbol: str, Open: [float], Close: [float], High: [float], Low: [float], Volume: [float], Date: [str], OP: int, CP: int, index: int, tick: float,
                  strategy: str, TP_SL_choice: str, SL_mult: float, TP_mult: float, backtesting=0, signal_queue=None, print_trades_q=None):
@@ -70,11 +68,11 @@ class Bot:
                     }
                 case 'tripleEMAStochasticRSIATR':
                     CloseS = pd.Series(self.Close)
-                    self.indicators = { "EMA_L": {"values": list(ema_indicator(CloseS, window=100)),
+                    self.indicators = { "EMA_L": {"values": list(ema_indicator(CloseS, window=50)),
                                                   "plotting_axis": 1},
-                                        "EMA_M": {"values": list(ema_indicator(CloseS, window=50)),
+                                        "EMA_M": {"values": list(ema_indicator(CloseS, window=14)),
                                                   "plotting_axis": 1},
-                                        "EMA_S": {"values": list(ema_indicator(CloseS, window=20)),
+                                        "EMA_S": {"values": list(ema_indicator(CloseS, window=7)),
                                                   "plotting_axis": 1},
                                         "fastd": {"values": list(stochrsi_d(CloseS)),
                                                   "plotting_axis": 3},

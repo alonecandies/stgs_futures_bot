@@ -85,7 +85,7 @@ class Bot:
                                           "plotting_axis": 1},
                                 "EMA_M": {"values": list(ema_indicator(Close, window=14)),
                                           "plotting_axis": 1},
-                                "EMA_S": {"values": list(ema_indicator(Close, window=8)),
+                                "EMA_S": {"values": list(ema_indicator(Close, window=7)),
                                           "plotting_axis": 1},
                                 "fastd": {"values": list(stochrsi_d(Close)),
                                           "plotting_axis": 3},

@@ -1,5 +1,9 @@
 from LiveTradingConfig import *
 from Logger import *
+import pandas as pd
+import numpy as np
+from ta.trend import ema_indicator
+from ta.momentum import rsi, stoch, stoch_signal
 
 def USDT_SL_TP(options):
     Q = round(1 / options['position_size'], 6)
@@ -465,92 +469,92 @@ def tripleEMAStochasticRSIATR(Close, Trade_Direction, EMA50, EMA14, EMA8, fastd,
 ##############################################################################################################################
 
 
-# def RSIStochEMA(Trade_Direction, Close, High, Low, signal1, currentPos, SL, TP, TP_choice, SL_choice):
-#     period = 60
-#     CloseS = pd.Series(Close)
-#     Close = np.array(Close)
-#     # High = np.array(High)
-#     # Low = np.array(Low)
-#     fastk = np.array(stoch_signal(pd.Series(High), pd.Series(Low), pd.Series(Close)))
-#     fastd = np.array(stoch(pd.Series(High), pd.Series(Low), pd.Series(Close)))
-#     RSI = np.array(rsi(CloseS))
-#     EMA200 = np.array(ema_indicator(CloseS, window=200))
-#     peaks_RSI = []
-#     corresponding_Close_peaks = []
-#     location_peaks = []
-#     troughs_RSI = []
-#     corresponding_Close_troughs = []
-#     location_troughs = []
-#     #####################Find peaks & troughs in RSI ##############################
-#     for i in range(len(RSI) - period, len(RSI) - 2):
-#         if RSI[i] > RSI[i - 1] and RSI[i] > RSI[i + 1] and RSI[i] > RSI[i - 2] and RSI[i] > RSI[i + 2]:
-#             ##Weve found a peak:
-#             peaks_RSI.append(RSI[i])
-#             corresponding_Close_peaks.append(Close[i])
-#             location_peaks.append(i)
-#         elif RSI[i] < RSI[i - 1] and RSI[i] < RSI[i + 1] and RSI[i] < RSI[i - 2] and RSI[i] < RSI[i + 2]:
-#             ##Weve found a trough:
-#             troughs_RSI.append(RSI[i])
-#             corresponding_Close_troughs.append(Close[i])
-#             location_troughs.append(i)
-#     ##Lower High Price & Higher High RSI => Bearish Divergence
-#     ##Higher Low Price & Lower low RSI => Bullish Divergence
-#     length = 0
-#     if len(peaks_RSI) > len(troughs_RSI):
-#         length = len(peaks_RSI)
-#     else:
-#         length = len(troughs_RSI)
-#     loc1 = -99
-#     loc2 = -99
-#     if length != 0:
-#         for i in range(length - 1):
-#             if i < len(peaks_RSI):
-#                 ##Check for hidden Bearish Divergence
-#                 if peaks_RSI[i] < peaks_RSI[current_index] and corresponding_Close_peaks[i] > corresponding_Close_peaks[current_index] and \
-#                         peaks_RSI[current_index] - peaks_RSI[i] > 1:
-#                     for j in range(i + 1, len(peaks_RSI) - 1):
-#                         if peaks_RSI[j] > peaks_RSI[i]:
-#                             break
-#                         elif j == len(peaks_RSI) - 2:
-#                             loc1 = location_peaks[i]
-#
-#             if i < len(troughs_RSI):
-#                 ##Check for hidden Bullish Divergence
-#                 if troughs_RSI[i] > troughs_RSI[current_index] and corresponding_Close_troughs[i] < corresponding_Close_troughs[
-#                     current_index] and troughs_RSI[i] - troughs_RSI[current_index] > 1:
-#                     for j in range(i + 1, len(troughs_RSI) - 1):
-#                         if troughs_RSI[j] < troughs_RSI[i]:
-#                             break
-#                         elif j == len(troughs_RSI) - 2:
-#                             loc2 = location_troughs[i]
-#         if loc1 == loc2:
-#             signal1 = -99
-#         elif loc1 > loc2:  # and 300-loc1<15:
-#             signal1 = 0
-#             # print(300-loc1)
-#         else:  # 300-loc2<15:
-#             # print(300-loc2)
-#             signal1 = 1
-#         '''else:
-#             signal1=-99'''
-#
-#     ##Bullish Divergence
-#     if signal1 == 1 and (fastk[current_index] > fastd[current_index] and (fastk[current_index - 1] < fastd[current_index - 1] or fastk[current_index - 2] < fastd[current_index - 2])) and Close[current_index] > \
-#             EMA200[current_index]:
-#         Trade_Direction = 1
-#         signal1 = -99
-#
-#     ##Bearish Divergence
-#     elif signal1 == 0 and (fastk[current_index] < fastd[current_index] and (fastk[current_index - 1] > fastd[current_index - 1] or fastk[current_index - 2] > fastd[current_index - 2])) and Close[current_index] < \
-#             EMA200[current_index]:
-#         Trade_Direction = 0
-#         signal1 = -99
-#
-#     if currentPos != -99:
-#         signal1 = -99
-#         Trade_Direction = -99
-#     stop_loss_val, take_profit_val = SetSLTP(-99, -99, Close, High, Low, Trade_Direction, SL, TP, TP_choice, SL_choice, current_index)
-#     return Trade_Direction, signal1, stop_loss_val, take_profit_val
+def RSIStochEMA(Trade_Direction, Close, High, Low, signal1, currentPos, SL, TP, TP_choice, SL_choice, current_index):
+    period = 60
+    CloseS = pd.Series(Close)
+    Close = np.array(Close)
+    # High = np.array(High)
+    # Low = np.array(Low)
+    fastk = np.array(stoch_signal(pd.Series(High), pd.Series(Low), pd.Series(Close)))
+    fastd = np.array(stoch(pd.Series(High), pd.Series(Low), pd.Series(Close)))
+    RSI = np.array(rsi(CloseS))
+    EMA200 = np.array(ema_indicator(CloseS, window=200))
+    peaks_RSI = []
+    corresponding_Close_peaks = []
+    location_peaks = []
+    troughs_RSI = []
+    corresponding_Close_troughs = []
+    location_troughs = []
+    #####################Find peaks & troughs in RSI ##############################
+    for i in range(len(RSI) - period, len(RSI) - 2):
+        if RSI[i] > RSI[i - 1] and RSI[i] > RSI[i + 1] and RSI[i] > RSI[i - 2] and RSI[i] > RSI[i + 2]:
+            ##Weve found a peak:
+            peaks_RSI.append(RSI[i])
+            corresponding_Close_peaks.append(Close[i])
+            location_peaks.append(i)
+        elif RSI[i] < RSI[i - 1] and RSI[i] < RSI[i + 1] and RSI[i] < RSI[i - 2] and RSI[i] < RSI[i + 2]:
+            ##Weve found a trough:
+            troughs_RSI.append(RSI[i])
+            corresponding_Close_troughs.append(Close[i])
+            location_troughs.append(i)
+    ##Lower High Price & Higher High RSI => Bearish Divergence
+    ##Higher Low Price & Lower low RSI => Bullish Divergence
+    length = 0
+    if len(peaks_RSI) > len(troughs_RSI):
+        length = len(peaks_RSI)
+    else:
+        length = len(troughs_RSI)
+    loc1 = -99
+    loc2 = -99
+    if length != 0:
+        for i in range(length - 1):
+            if i < len(peaks_RSI):
+                ##Check for hidden Bearish Divergence
+                if peaks_RSI[i] < peaks_RSI[current_index] and corresponding_Close_peaks[i] > corresponding_Close_peaks[current_index] and \
+                        peaks_RSI[current_index] - peaks_RSI[i] > 1:
+                    for j in range(i + 1, len(peaks_RSI) - 1):
+                        if peaks_RSI[j] > peaks_RSI[i]:
+                            break
+                        elif j == len(peaks_RSI) - 2:
+                            loc1 = location_peaks[i]
+
+            if i < len(troughs_RSI):
+                ##Check for hidden Bullish Divergence
+                if troughs_RSI[i] > troughs_RSI[current_index] and corresponding_Close_troughs[i] < corresponding_Close_troughs[
+                    current_index] and troughs_RSI[i] - troughs_RSI[current_index] > 1:
+                    for j in range(i + 1, len(troughs_RSI) - 1):
+                        if troughs_RSI[j] < troughs_RSI[i]:
+                            break
+                        elif j == len(troughs_RSI) - 2:
+                            loc2 = location_troughs[i]
+        if loc1 == loc2:
+            signal1 = -99
+        elif loc1 > loc2:  # and 300-loc1<15:
+            signal1 = 0
+            # print(300-loc1)
+        else:  # 300-loc2<15:
+            # print(300-loc2)
+            signal1 = 1
+        '''else:
+            signal1=-99'''
+
+    ##Bullish Divergence
+    if signal1 == 1 and (fastk[current_index] > fastd[current_index] and (fastk[current_index - 1] < fastd[current_index - 1] or fastk[current_index - 2] < fastd[current_index - 2])) and Close[current_index] > \
+            EMA200[current_index]:
+        Trade_Direction = 1
+        signal1 = -99
+
+    ##Bearish Divergence
+    elif signal1 == 0 and (fastk[current_index] < fastd[current_index] and (fastk[current_index - 1] > fastd[current_index - 1] or fastk[current_index - 2] > fastd[current_index - 2])) and Close[current_index] < \
+            EMA200[current_index]:
+        Trade_Direction = 0
+        signal1 = -99
+
+    if currentPos != -99:
+        signal1 = -99
+        Trade_Direction = -99
+    stop_loss_val, take_profit_val = SetSLTP(-99, -99, Close, High, Low, Trade_Direction, SL, TP, TP_choice, SL_choice, current_index)
+    return Trade_Direction, signal1, stop_loss_val, take_profit_val
 
 
 ##############################################################################################################
@@ -591,27 +595,27 @@ def ema_crossover(Trade_Direction, current_index, ema_short, ema_long):
         Trade_Direction = 1
     return Trade_Direction
 
-# def fakeout(Trade_Direction, Close, VolumeStream, High, Low, SL, TP, TP_choice, SL_choice):
-#     invert = 1
-#     # if symbol == 'BTCUSDT' or symbol == 'ETHUSDT':
-#     #    invert = 0
-#     Close = pd.Series(Close)  # .pct_change() ##get size of bars in a percentage
-#     Volume = pd.Series(VolumeStream[:current_index])
-#     max_Close = Close.iloc[:current_index].rolling(15).max()
-#     min_Close = Close.iloc[:current_index].rolling(15).min()
-#     max_Vol = Volume.rolling(15).max()
-#     if invert:
-#         if Close.iloc[current_index] > max_Close.iloc[current_index] and VolumeStream[current_index] < max_Vol.iloc[current_index]:
-#             Trade_Direction = 0
-#         elif Close.iloc[current_index] < min_Close.iloc[current_index] and VolumeStream[current_index] < max_Vol.iloc[current_index]:
-#             Trade_Direction = 1
-#     else:
-#         if Close.iloc[current_index] > max_Close.iloc[current_index] and VolumeStream[current_index] < max_Vol.iloc[current_index]:
-#             Trade_Direction = 1
-#         elif Close.iloc[current_index] < min_Close.iloc[current_index] and VolumeStream[current_index] < max_Vol.iloc[current_index]:
-#             Trade_Direction = 0
-#     stop_loss_val, take_profit_val = SetSLTP(-99, -99, Close, High, Low, Trade_Direction, SL, TP, TP_choice, SL_choice, current_index)
-#     return Trade_Direction, stop_loss_val, take_profit_val
+def fakeout(Trade_Direction, Close, VolumeStream, High, Low, SL, TP, TP_choice, SL_choice, current_index):
+    invert = 1
+    # if symbol == 'BTCUSDT' or symbol == 'ETHUSDT':
+    #    invert = 0
+    Close = pd.Series(Close)  # .pct_change() ##get size of bars in a percentage
+    Volume = pd.Series(VolumeStream[:current_index])
+    max_Close = Close.iloc[:current_index].rolling(15).max()
+    min_Close = Close.iloc[:current_index].rolling(15).min()
+    max_Vol = Volume.rolling(15).max()
+    if invert:
+        if Close.iloc[current_index] > max_Close.iloc[current_index] and VolumeStream[current_index] < max_Vol.iloc[current_index]:
+            Trade_Direction = 0
+        elif Close.iloc[current_index] < min_Close.iloc[current_index] and VolumeStream[current_index] < max_Vol.iloc[current_index]:
+            Trade_Direction = 1
+    else:
+        if Close.iloc[current_index] > max_Close.iloc[current_index] and VolumeStream[current_index] < max_Vol.iloc[current_index]:
+            Trade_Direction = 1
+        elif Close.iloc[current_index] < min_Close.iloc[current_index] and VolumeStream[current_index] < max_Vol.iloc[current_index]:
+            Trade_Direction = 0
+    stop_loss_val, take_profit_val = SetSLTP(-99, -99, Close, High, Low, Trade_Direction, SL, TP, TP_choice, SL_choice, current_index)
+    return Trade_Direction, stop_loss_val, take_profit_val
 
 
 def EMA_cross(Trade_Direction, EMA_short, EMA_long, current_index):
@@ -631,60 +635,60 @@ def EMA_cross(Trade_Direction, EMA_short, EMA_long, current_index):
 
     return Trade_Direction
 
-'''def pairTrading(Trade_Direction,Close1,Close2,log=0,TPSL=0,percent_TP=0,percent_SL=0):
-    new_Close = []
+# def pairTrading(Trade_Direction,Close1,Close2,log=0,TPSL=0,percent_TP=0,percent_SL=0):
+#     new_Close = []
     
-    #multiplier = Close1[0]/Close2[0]
-    if not log:
-        multiplier = (sm.OLS(Close1, Close2).fit()).params[0]
-        for i in range(len(Close1)current_index - 20,len(Close1)):
-            new_Close.append(Close1[i]-multiplier*Close2[i])
-    else:
-        log_close1 = []
-        log_close2 = []
-        for i in range(len(Close1)current_index - 20,len(Close1)):
-            log_close1.append(math.log(Close1[i]))
-            log_close2.append(math.log(Close2[i]))
-        multiplier = (sm.OLS(log_close1, log_close2).fit()).params[0]
-        for i in range(len(log_close1)):
-            new_Close.append(log_close1[i] - multiplier * log_close2[i])
-    BB =np.array(bollinger_pband(pd.Series(new_Close),window_dev=3))
-    #BB1 = np.array(bollinger_hband(pd.Series(new_Close),window_dev=3))
-    #BB2 = np.array(bollinger_lband(pd.Series(new_Close), window_dev=3))
-    #SMA20 = np.array(bollinger_mavg(pd.Series(new_Close)))
-    #print(BB[current_index])
-    if BB[current_index]>1:
-        Trade_Direction = [0,1]  # [1,0]
+#     #multiplier = Close1[0]/Close2[0]
+#     if not log:
+#         multiplier = (sm.OLS(Close1, Close2).fit()).params[0]
+#         for i in range(len(Close1) * current_index - 20,len(Close1)):
+#             new_Close.append(Close1[i]-multiplier*Close2[i])
+#     else:
+#         log_close1 = []
+#         log_close2 = []
+#         for i in range(len(Close1) * current_index - 20,len(Close1)):
+#             log_close1.append(math.log(Close1[i]))
+#             log_close2.append(math.log(Close2[i]))
+#         multiplier = (sm.OLS(log_close1, log_close2).fit()).params[0]
+#         for i in range(len(log_close1)):
+#             new_Close.append(log_close1[i] - multiplier * log_close2[i])
+#     BB =np.array(bollinger_pband(pd.Series(new_Close),window_dev=3))
+#     #BB1 = np.array(bollinger_hband(pd.Series(new_Close),window_dev=3))
+#     #BB2 = np.array(bollinger_lband(pd.Series(new_Close), window_dev=3))
+#     #SMA20 = np.array(bollinger_mavg(pd.Series(new_Close)))
+#     #print(BB[current_index])
+#     if BB[current_index]>1:
+#         Trade_Direction = [0,1]  # [1,0]
         
-    elif BB[current_index]<0:
-        Trade_Direction = [1,0] # [0,1]
+#     elif BB[current_index]<0:
+#         Trade_Direction = [1,0] # [0,1]
         
-    return Trade_Direction,[9,9] #,Close1_TP,Close2_TP,Close1_SL,Close2_SL
+#     return Trade_Direction,[9,9] #,Close1_TP,Close2_TP,Close1_SL,Close2_SL
 
 
-def pairTrading_Crossover(Trade_Direction, Close1, Close2, CurrentPos, percent_SL=0):
-    new_Close = []
-    Close_pos=0
-    Close1_SL = 0
-    Close2_SL = 0
-    multiplier = (sm.OLS(Close1, Close2).fit()).params[0]
-    for i in range(len(Close1)current_index - 20,len(Close1)):
-        new_Close.append(Close1[i]-multiplier*Close2[i])
-    BB =np.array(bollinger_pband(pd.Series(new_Close),window_dev=3))
-    SMA20 = np.array(bollinger_mavg(pd.Series(new_Close)))
-    if BB[current_index]>1:
-        Trade_Direction = [0,1]
-        Close1_SL = Close1[current_index] * percent_SL
-        Close2_SL = Close2[current_index] * percent_SL
-    elif BB[current_index]<0:
-        Trade_Direction = [1,0]
-        Close1_SL = Close1[current_index] * percent_SL
-        Close2_SL = Close2[current_index] * percent_SL
-    if CurrentPos!=-99:
-        if (new_Close[current_index]>SMA20[current_index] and (new_Close[current_index - 1]<SMA20[current_index - 1] or new_Close[current_index - 2]<SMA20[current_index - 2])) or (new_Close[current_index]<SMA20[current_index] and (new_Close[current_index - 1]>SMA20[current_index - 1] or new_Close[current_index - 2]>SMA20[current_index - 2])):
-            ##Price has crossed up or down over the Moving average so close the position
-            Close_pos=1
-    return Trade_Direction,Close1_SL,Close2_SL,Close_pos'''
+# def pairTrading_Crossover(Trade_Direction, Close1, Close2, CurrentPos, percent_SL=0):
+#     new_Close = []
+#     Close_pos=0
+#     Close1_SL = 0
+#     Close2_SL = 0
+#     multiplier = (sm.OLS(Close1, Close2).fit()).params[0]
+#     for i in range(len(Close1) * current_index - 20,len(Close1)):
+#         new_Close.append(Close1[i]-multiplier*Close2[i])
+#     BB =np.array(bollinger_pband(pd.Series(new_Close),window_dev=3))
+#     SMA20 = np.array(bollinger_mavg(pd.Series(new_Close)))
+#     if BB[current_index]>1:
+#         Trade_Direction = [0,1]
+#         Close1_SL = Close1[current_index] * percent_SL
+#         Close2_SL = Close2[current_index] * percent_SL
+#     elif BB[current_index]<0:
+#         Trade_Direction = [1,0]
+#         Close1_SL = Close1[current_index] * percent_SL
+#         Close2_SL = Close2[current_index] * percent_SL
+#     if CurrentPos!=-99:
+#         if (new_Close[current_index]>SMA20[current_index] and (new_Close[current_index - 1]<SMA20[current_index - 1] or new_Close[current_index - 2]<SMA20[current_index - 2])) or (new_Close[current_index]<SMA20[current_index] and (new_Close[current_index - 1]>SMA20[current_index - 1] or new_Close[current_index - 2]>SMA20[current_index - 2])):
+#             ##Price has crossed up or down over the Moving average so close the position
+#             Close_pos=1
+#     return Trade_Direction,Close1_SL,Close2_SL,Close_pos
 
 
 def SetSLTP(stop_loss_val_arr, take_profit_val_arr, peaks, troughs, Close, High, Low, Trade_Direction, SL, TP, TP_SL_choice, current_index):

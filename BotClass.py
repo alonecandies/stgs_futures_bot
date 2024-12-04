@@ -5,9 +5,12 @@ import pandas as pd
 import TradingStrats as TS
 from Logger import *
 from LiveTradingConfig import custom_tp_sl_functions, make_decision_options, wait_for_candle_close
+from typing import List
+import os
+import sys
 
 class Bot:
-    def __init__(self, symbol: str, Open: [float], Close: [float], High: [float], Low: [float], Volume: [float], Date: [str], OP: int, CP: int, index: int, tick: float,
+    def __init__(self, symbol: str, Open: List[float], Close: List[float], High: List[float], Low: List[float], Volume: List[float], Date: List[str], OP: int, CP: int, index: int, tick: float,
                  strategy: str, TP_SL_choice: str, SL_mult: float, TP_mult: float, backtesting=0, signal_queue=None, print_trades_q=None):
         self.symbol = symbol
         self.Date = Date
@@ -227,7 +230,7 @@ class Bot:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             log.error(f'update_TP_SL() - Error occurred with tp_sl_choice: {self.TP_SL_choice}, Error Info: {exc_obj, fname, exc_tb.tb_lineno}, Error: {e}')
 
-    def add_hist(self, Date_temp: [float], Open_temp: [float], Close_temp: [float], High_temp: [float], Low_temp: [float], Volume_temp: [str]):
+    def add_hist(self, Date_temp: List[float], Open_temp: List[float], Close_temp: List[float], High_temp: List[float], Low_temp: List[float], Volume_temp: List[str]):
         if not self.backtesting:
             try:
                 while 0 < len(self.Date):

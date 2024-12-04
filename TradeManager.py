@@ -1,10 +1,10 @@
 from threading import Thread
+from typing import List
 
 from binance import ThreadedWebsocketManager
 from binance.client import Client
 from binance.enums import SIDE_SELL, SIDE_BUY, FUTURE_ORDER_TYPE_MARKET, FUTURE_ORDER_TYPE_LIMIT, TIME_IN_FORCE_GTC, \
     FUTURE_ORDER_TYPE_STOP_MARKET, FUTURE_ORDER_TYPE_TAKE_PROFIT
-from binance.exceptions import BinanceAPIException
 from tabulate import tabulate
 
 import TradingStrats
@@ -12,6 +12,8 @@ from LiveTradingConfig import *
 import time
 from Helper import Trade
 from Logger import *
+import os
+import sys
 
 def calculate_custom_tp_sl(options):
     '''
@@ -30,7 +32,7 @@ def calculate_custom_tp_sl(options):
 class TradeManager:
     def __init__(self, client: Client, new_trades_q, print_trades_q):
         self.client = client
-        self.active_trades: [Trade] = []
+        self.active_trades: List[Trade] = []
         self.use_trailing_stop = use_trailing_stop
         self.trailing_stop_callback = trailing_stop_callback
         self.use_market_orders = use_market_orders
@@ -346,7 +348,7 @@ class TradeManager:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             log.warning(f'get_account_balance() - error getting account balance, Error Info: {exc_obj, fname, exc_tb.tb_lineno}, Error: {e}')
 
-    def place_TP(self, symbol: str, TP: [float, float], trade_direction: int, CP: int, tick_size: float):
+    def place_TP(self, symbol: str, TP: List[float], trade_direction: int, CP: int, tick_size: float):
         ''' Function that places a new TP order '''
         TP_ID = ''
         TP_val = 0
@@ -441,7 +443,7 @@ class TradeManager:
                 type=FUTURE_ORDER_TYPE_MARKET,
                 quantity=total_position_size)
 
-    def check_position_and_cancel_orders(self, trade: Trade, open_trades: [str]):
+    def check_position_and_cancel_orders(self, trade: Trade, open_trades: List[str]):
         ''' Function that checks we haven't entered a position before cancelling it '''
         if trade.symbol not in open_trades:
             self.client.futures_cancel_all_open_orders(symbol=trade.symbol)

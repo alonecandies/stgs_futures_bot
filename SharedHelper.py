@@ -1,6 +1,8 @@
 import numpy as np
 from Logger import *
 import BotClass
+import os
+import sys
 
 def get_all_symbols(client, coin_exclusion_list):
     ''' Function that returns the list of trade-able USDT symbols & removes coins you've added to your exclusion list in live_trading_config.py '''

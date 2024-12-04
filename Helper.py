@@ -5,8 +5,10 @@ from LiveTradingConfig import *
 from binance import ThreadedWebsocketManager
 import time
 from Logger import *
+from typing import List
 import numpy as np
-
+import os
+import sys
 
 def convert_buffer_to_string(buffer_int):
     ''' Function that converts the candle number to a String in hours/days to pass to binance'''
@@ -43,8 +45,7 @@ class CustomClient:
         self.leverage = leverage
         self.twm = ThreadedWebsocketManager(api_key=API_KEY, api_secret=API_SECRET)
         self.number_of_bots = 0
-
-    def set_leverage(self, symbols_to_trade: [str]):
+    def set_leverage(self, symbols_to_trade: List[str]):
         ''' Function that sets the leverage for each coin as specified in live_trading_config.py '''
         log.info("set_leverage() - Setting Leverage...")
         i = 0
@@ -59,7 +60,7 @@ class CustomClient:
                 log.warning(f"set_leverage() - Symbol: {symbols_to_trade[i]} removing symbol due to error, Error Info: {exc_obj, fname, exc_tb.tb_lineno}, Error: {e}")
                 symbols_to_trade.pop(i)
 
-    def start_websockets(self, bots: [BotClass.Bot]):
+    def start_websockets(self, bots: List[BotClass.Bot]):
         ''' Function that starts the websockets for price data in the bots '''
         self.twm.start()  ##start ws manager
         log.info("start_websockets() - Starting Websockets...")
@@ -76,7 +77,7 @@ class CustomClient:
                 bots.pop(i)
         self.number_of_bots = len(bots)
 
-    def ping_server_reconnect_sockets(self, bots: [BotClass.Bot]):
+    def ping_server_reconnect_sockets(self, bots: List[BotClass.Bot]):
         ''' Loop that runs constantly, it pings the server every 15 seconds, so we don't lose connection '''
         while True:
             time.sleep(15)
@@ -94,7 +95,7 @@ class CustomClient:
                         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                         log.error(f"retry_websockets_job() - Error in resetting websocket for {bot.symbol}, Error Info: {exc_obj, fname, exc_tb.tb_lineno}, Error: {e}")
 
-    def setup_bots(self, bots: [BotClass.Bot], symbols_to_trade: [str], signal_queue, print_trades_q):
+    def setup_bots(self, bots: List[BotClass.Bot], symbols_to_trade: List[str], signal_queue, print_trades_q):
         ''' Function that initializes a Bot class for each symbol in our symbols_to_trade list / All symbols if trade_all_coins is True '''
         log.info(f"setup_bots() - Beginning Bots setup...")
         y = self.client.futures_exchange_info()['symbols']
@@ -130,7 +131,7 @@ class CustomClient:
                     log.warning(f"setup_bots() - Error occurred removing symbol, Error Info: {exc_obj, fname, exc_tb.tb_lineno}, Error: {e}")
         log.info(f"setup_bots() - Bots have completed setup")
 
-    def combine_data(self, bots: [BotClass.Bot], symbols_to_trade: [str], buffer):
+    def combine_data(self, bots: List[BotClass.Bot], symbols_to_trade: List[str], buffer):
         ''' Function that pulls in historical data so we have candles for the Bot to start trading immediately '''
         log.info("combine_data() - Combining Historical and web socket data...")
         i = 0

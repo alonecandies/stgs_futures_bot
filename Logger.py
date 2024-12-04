@@ -2,9 +2,6 @@ import logging
 from datetime import datetime
 import colorlog
 from LiveTradingConfig import LOG_LEVEL, log_to_file
-import os
-import sys
-
 
 def get_logger():
     # Create a logger and set its level to LOG_LEVEL

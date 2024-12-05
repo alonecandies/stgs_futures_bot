@@ -12,7 +12,7 @@ import os
 
 os.environ['TYPE_CHECKING'] = 'False'
 
-if __name__ == '__main__':
+def main():
     log.info(f'Configuration:\ntrading strategy: {trading_strategy}\nleverage: {leverage}\norder size: {order_size}\n'
              f'interval: {interval}\nTP/SL choice: {TP_SL_choice}\nSL mult: {SL_mult}\nTP mult: {TP_mult}\n'
              f'trade all symbols: {trade_all_symbols}\nsymbols to trade: {symbols_to_trade}\nuse trailing stop: {use_trailing_stop}\n'
@@ -35,13 +35,16 @@ if __name__ == '__main__':
 
     python_binance_client = Client(api_key=API_KEY, api_secret=API_SECRET)
     client = CustomClient(python_binance_client)
-    if trade_all_symbols:
-        symbols_to_trade = SharedHelper.get_all_symbols(python_binance_client, coin_exclusion_list)
 
-    client.set_leverage(symbols_to_trade)
+    symbols_to_trade_cloned = symbols_to_trade.copy()
+
+    if trade_all_symbols:
+        symbols_to_trade_cloned = SharedHelper.get_all_symbols(python_binance_client, coin_exclusion_list)
+
+    client.set_leverage(symbols_to_trade_cloned)
 
     ## Initialize a bot for each coin we're trading
-    client.setup_bots(Bots, symbols_to_trade, signal_queue, print_trades_q)
+    client.setup_bots(Bots, symbols_to_trade_cloned, signal_queue, print_trades_q)
 
     client.start_websockets(Bots)
 
@@ -67,7 +70,10 @@ if __name__ == '__main__':
         buffer_int = SharedHelper.get_required_buffer(trading_strategy)
         buffer = convert_buffer_to_string(buffer_int)
     ## Combine data collected from websockets with historical data, so we have a buffer of data to calculate signals
-    combine_data_thread = Thread(target=client.combine_data, args=(Bots, symbols_to_trade, buffer))
+    combine_data_thread = Thread(target=client.combine_data, args=(Bots, symbols_to_trade_cloned, buffer))
     combine_data_thread.daemon = True
     combine_data_thread.start()
     new_trade_loop.join()
+
+if __name__ == '__main__':
+    main()

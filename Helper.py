@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from binance.client import Client
 
 import BotClass
@@ -45,20 +46,38 @@ class CustomClient:
         self.leverage = leverage
         self.twm = ThreadedWebsocketManager(api_key=API_KEY, api_secret=API_SECRET)
         self.number_of_bots = 0
+
     def set_leverage(self, symbols_to_trade: List[str]):
         ''' Function that sets the leverage for each coin as specified in live_trading_config.py '''
-        log.info("set_leverage() - Setting Leverage...")
-        i = 0
-        while i < len(symbols_to_trade):
-            log.info(f"set_leverage() - ({i + 1}/{len(symbols_to_trade)}) Setting leverage on {symbols_to_trade[i]}")
+        log.info("set_leverage() - Setting Leverage in parallel batches...")
+        
+        def set_symbol_leverage(symbol):
+            """Helper function to set leverage for a single symbol."""
             try:
-                self.client.futures_change_leverage(symbol=symbols_to_trade[i], leverage=self.leverage)
-                i += 1
+                self.client.futures_change_leverage(symbol=symbol, leverage=self.leverage)
+                log.info(f"set_leverage() - Successfully set leverage on {symbol}")
+                return symbol, None
             except Exception as e:
                 exc_type, exc_obj, exc_tb = sys.exc_info()
                 fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                log.warning(f"set_leverage() - Symbol: {symbols_to_trade[i]} removing symbol due to error, Error Info: {exc_obj, fname, exc_tb.tb_lineno}, Error: {e}")
-                symbols_to_trade.pop(i)
+                log.warning(f"set_leverage() - Symbol: {symbol} failed due to error, "
+                            f"Error Info: {exc_obj, fname, exc_tb.tb_lineno}, Error: {e}")
+                return symbol, e
+
+        # Use ThreadPoolExecutor to run tasks in parallel
+        max_workers = min(10, len(symbols_to_trade))  # Adjust the number of workers as needed
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {executor.submit(set_symbol_leverage, symbol): symbol for symbol in symbols_to_trade}
+            results = []
+            
+            for future in as_completed(futures):
+                symbol, error = future.result()
+                if error:
+                    symbols_to_trade.remove(symbol)  # Remove failed symbol from the list
+                else:
+                    results.append(symbol)
+
+        log.info(f"set_leverage() - Completed leverage setting. Successfully set for {len(results)} symbols.")
 
     def start_websockets(self, bots: List[BotClass.Bot]):
         ''' Function that starts the websockets for price data in the bots '''
@@ -133,37 +152,65 @@ class CustomClient:
 
     def combine_data(self, bots: List[BotClass.Bot], symbols_to_trade: List[str], buffer):
         ''' Function that pulls in historical data so we have candles for the Bot to start trading immediately '''
-        log.info("combine_data() - Combining Historical and web socket data...")
-        i = 0
-        while i < len(bots):
-            log.info(f"combine_data() - ({i + 1}/{len(bots)}) Gathering and combining data for {bots[i].symbol}...")
-            date_temp, open_temp, close_temp, high_temp, low_temp, volume_temp = self.get_historical(
-                symbol=bots[i].symbol, buffer=buffer)
+        log.info("combine_data() - Combining Historical and WebSocket data in parallel batches...")
+
+        def process_bot(bot, buffer):
+            """Helper function to process historical data for a single bot."""
             try:
-                ##Pop off last candle as it is a duplicate, luki009's suggestion
+                log.info(f"combine_data() - Gathering and combining data for {bot.symbol}...")
+                date_temp, open_temp, close_temp, high_temp, low_temp, volume_temp = self.get_historical(
+                    symbol=bot.symbol, buffer=buffer)
+                
+                # Pop off last candle as it is a duplicate
                 date_temp.pop(-1)
                 open_temp.pop(-1)
                 close_temp.pop(-1)
                 high_temp.pop(-1)
                 low_temp.pop(-1)
                 volume_temp.pop(-1)
-                bots[i].add_hist(Date_temp=date_temp, Open_temp=open_temp, Close_temp=close_temp, High_temp=high_temp,
-                                 Low_temp=low_temp, Volume_temp=volume_temp)
-                i += 1
+                
+                # Add historical data to bot
+                bot.add_hist(
+                    Date_temp=date_temp,
+                    Open_temp=open_temp,
+                    Close_temp=close_temp,
+                    High_temp=high_temp,
+                    Low_temp=low_temp,
+                    Volume_temp=volume_temp
+                )
+                return bot, None
             except Exception as e:
                 exc_type, exc_obj, exc_tb = sys.exc_info()
                 fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                try:
-                    log.warning(f"combine_data() - Error occurred adding data, Error Info: {exc_obj, fname, exc_tb.tb_lineno}, Error: {e}")
-                    self.twm.stop_socket(bots[i].stream)
-                    symbols_to_trade.pop(i)
-                    bots.pop(i)
-                    self.number_of_bots -= 1
-                except Exception as e:
-                    exc_type, exc_obj, exc_tb = sys.exc_info()
-                    fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                    log.warning(f"combine_data() - Error occurred removing symbol, Error Info: {exc_obj, fname, exc_tb.tb_lineno}, Error: {e}")
-        log.info("combine_data() - Finished Combining data for all symbols, Searching for trades now...")
+                log.warning(f"combine_data() - Error occurred adding data for {bot.symbol}, "
+                            f"Error Info: {exc_obj, fname, exc_tb.tb_lineno}, Error: {e}")
+                return bot, e
+
+        max_workers = min(10, len(bots))  # Adjust max_workers as necessary
+        failed_bots = []
+
+        # Process bots in parallel
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {executor.submit(process_bot, bot, buffer): bot for bot in bots}
+            for future in as_completed(futures):
+                bot, error = future.result()
+                if error:
+                    # Stop the WebSocket and remove bot and symbol if processing failed
+                    try:
+                        self.twm.stop_socket(bot.stream)
+                        symbols_to_trade.remove(bot.symbol)
+                        bots.remove(bot)
+                        self.number_of_bots -= 1
+                    except Exception as e:
+                        exc_type, exc_obj, exc_tb = sys.exc_info()
+                        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                        log.warning(f"combine_data() - Error occurred removing symbol {bot.symbol}, "
+                                    f"Error Info: {exc_obj, fname, exc_tb.tb_lineno}, Error: {e}")
+                    failed_bots.append(bot.symbol)
+
+        if failed_bots:
+            log.info(f"combine_data() - Failed to combine data for symbols: {failed_bots}")
+        log.info("combine_data() - Finished combining data for all symbols. Searching for trades now...")
 
     def get_historical(self, symbol: str, buffer):
         ''' Function that pulls the historical data for a symbol '''
